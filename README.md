@@ -42,14 +42,14 @@ customer-churn-prediction/
 
 ## Data Cleaning
 
-TotalCharges was stored as text instead of a number. Turns out the blank values all belonged to customers with tenure = 0, basically brand new customers who hadn't been billed yet, so those got filled with 0 instead of dropped.
+TotalCharges was stored as text instead of a number. Turns out the blank values all belonged to customers with tenure = 0, basically brand new customers who hadnt been billed yet, so those got filled with 0 instead of dropped.
 
 ## Exploratory Data Analysis
 
 - About 27% of customers churned. Imbalanced target, matters for how the models get evaluated later.
 - Contract type is one of the strongest signals, month to month customers churn way more than customers on a 1 or 2 year contract. Makes sense since theres no penalty for leaving.
 - Tenure: churn is heavily concentrated in the first several months. Customers who stick around past year one are a lot less likely to leave.
-- TotalCharges is highly correlated with tenure (roughly tenure x MonthlyCharges), so it doesn't add a ton of independent signal but I kept it anyway.
+- TotalCharges is highly correlated with tenure (roughly tenure x MonthlyCharges), so it doesnt add a ton of independent signal but I kept it anyway.
 
 | Churn distribution | Churn by contract type | Tenure by churn |
 |---|---|---|
@@ -58,7 +58,7 @@ TotalCharges was stored as text instead of a number. Turns out the blank values 
 ## Feature Engineering
 
 - Binary Yes/No columns (Partner, Dependents, PaperlessBilling, etc) got label encoded.
-- Columns with more than 2 categories (Contract, InternetService, PaymentMethod, etc) got one-hot encoded instead, so the model doesn't accidentally think one category is bigger than another.
+- Columns with more than 2 categories (Contract, InternetService, PaymentMethod, etc) got one-hot encoded instead, so the model doesnt accidentally think one category is bigger than another.
 - Numeric columns (tenure, MonthlyCharges, TotalCharges) were standardized before Logistic Regression. Without scaling the solver actually failed to converge, since these columns are way bigger numbers than the 0/1 dummy columns.
 
 ## Methodology
@@ -68,7 +68,7 @@ TotalCharges was stored as text instead of a number. Turns out the blank values 
 ## Models Used
 
 - **Logistic Regression**, the baseline. Simple, fast, interpretable, gives something for a fancier model to actually beat.
-- **Random Forest**, tried next to see if it picks up on non linear relationships that Logistic Regression can't.
+- **Random Forest**, tried next to see if it picks up on non linear relationships that Logistic Regression cant.
 
 ## Model Evaluation
 
@@ -85,11 +85,11 @@ Accuracy alone is kind of misleading here since a model that just predicts "No c
 
 ## Results
 
-Both baseline models perform pretty much the same. Random Forest doesn't seem to be picking up much extra signal, probably because the strongest churn features (contract type, tenure) are already close to linearly related to the outcome. Going with Logistic Regression since it performs the same and is way easier to explain.
+Both baseline models perform pretty much the same. Random Forest doesnt seem to be picking up much extra signal, probably because the strongest churn features (contract type, tenure) are already close to linearly related to the outcome. Going with Logistic Regression since it performs the same and is way easier to explain.
 
 ## Improving Recall
 
-The baseline only catches 56% of actual churners, which isn't great for a retention use case where missing a churner is usually worse than wasting an offer on someone who wasn't going to leave. Two things were tried:
+The baseline only catches 56% of actual churners, which isnt great for a retention use case where missing a churner is usually worse than wasting an offer on someone who wasnt going to leave. Two things were tried:
 
 | Approach | Precision (Churn) | Recall (Churn) | ROC-AUC |
 |---|---|---|---|
@@ -99,7 +99,7 @@ The baseline only catches 56% of actual churners, which isn't great for a retent
 
 ![Precision/recall tradeoff](results/threshold_tuning.png)
 
-class_weight="balanced" ended up being the better fix, recall goes from 0.56 to 0.78 (catching around 3 in 4 churners now instead of just over half), precision drops to 0.50 though. ROC-AUC barely changes either way, which makes sense since it measures how well the model ranks churners above non churners and neither technique changes that ranking, they just move where the cutoff sits. Threshold tuning got a similar but slightly worse result (0.76 recall) so class weighting is the one I'd actually go with.
+class_weight="balanced" ended up being the better fix, recall goes from 0.56 to 0.78 (catching around 3 in 4 churners now instead of just over half), precision drops to 0.50 though. ROC-AUC barely changes either way, which makes sense since it measures how well the model ranks churners above non churners and neither technique changes that ranking, they just move where the cutoff sits. Threshold tuning got a similar but slightly worse result (0.76 recall) so class weighting is the one id actually go with.
 
 ![Confusion matrix at threshold 0.3](results/confusion_matrix_tuned.png)
 
@@ -111,8 +111,8 @@ tenure, TotalCharges, MonthlyCharges and Contract type are consistently the stro
 
 ## Limitations
 
-- Precision drops to 0.50 in the recall-improved model, so about half the customers flagged as "at risk" wont actually churn. Retention offers under this model would go to a lot of people who didn't need one.
-- Its a snapshot, not a time series, so it can't say when a customer is about to churn, just that they're at higher risk.
+- Precision drops to 0.50 in the recall-improved model, so about half the customers flagged as "at risk" wont actually churn. Retention offers under this model would go to a lot of people who didnt need one.
+- Its a snapshot, not a time series, so it cant say when a customer is about to churn, just that they're at higher risk.
 - Didn't do much hyperparameter tuning, max_depth=10 for Random Forest was just a reasonable guess.
 - Didn't try SMOTE, only class weighting and threshold tuning, which was already enough to see a clear improvement.
 
