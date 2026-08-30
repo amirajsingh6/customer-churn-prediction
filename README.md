@@ -84,7 +84,23 @@ Accuracy alone is misleading here — a model that predicted "No churn" for ever
 
 ## Results
 
-The two models perform almost identically. Random Forest's ability to capture non-linear interactions doesn't add meaningful lift here, likely because the strongest churn signals (contract type, tenure) are already close to linearly related to the outcome. Given that, Logistic Regression is the more sensible choice in practice — same performance, but easier to explain to a non-technical stakeholder.
+The two baseline models perform almost identically. Random Forest's ability to capture non-linear interactions doesn't add meaningful lift here, likely because the strongest churn signals (contract type, tenure) are already close to linearly related to the outcome. Given that, Logistic Regression is the more sensible baseline choice — same performance, but easier to explain to a non-technical stakeholder.
+
+## Improving Recall
+
+The baseline only catches 56% of actual churners — a real weakness for a retention use case, where missing an at-risk customer is usually costlier than a wasted retention offer. Two fixes were tried:
+
+| Approach | Precision (Churn) | Recall (Churn) | ROC-AUC |
+|---|---|---|---|
+| Baseline (threshold 0.5) | 0.66 | 0.56 | 0.842 |
+| `class_weight="balanced"` | 0.50 | **0.78** | 0.842 |
+| Threshold tuned to 0.3 | 0.52 | 0.76 | 0.842 |
+
+![Precision/recall trade-off](results/threshold_tuning.png)
+
+Class weighting turned out to be the more effective of the two — it lifts recall from 0.56 to 0.78 (catching roughly 3 in 4 churners instead of just over half), at the cost of precision dropping to 0.50. ROC-AUC barely moves in either case, which makes sense: it measures how well the model *ranks* churners above non-churners, and neither technique changes that ranking — they just shift where the decision cutoff falls. Threshold tuning alone reached a similar but slightly weaker result (0.76 recall), so class weighting is the recommended approach here, with threshold tuning available as an extra lever if the exact cost of a missed churner vs. a wasted offer is known.
+
+![Confusion matrix, baseline model with threshold lowered to 0.3](results/confusion_matrix_tuned.png)
 
 ## Key Findings
 
@@ -94,17 +110,17 @@ The two models perform almost identically. Random Forest's ability to capture no
 
 ## Limitations
 
-- **Recall on churners is moderate (~53–56%)** — the models miss close to half of customers who actually churn. For a real retention campaign, this would need improving before relying on it.
+- **Precision drops to 0.50 in the recall-improved model** — about half of the customers flagged as "at risk" won't actually churn, so retention offers under this model would be spent inefficiently in exchange for catching more real churners.
 - The dataset is a **snapshot**, not a time series — it can't show *when* a customer is about to churn, only whether they're at elevated risk.
 - No hyperparameter tuning was done beyond a couple of reasonable defaults (`max_depth=10` for the Random Forest); a grid/random search would likely squeeze out a bit more performance.
-- Class imbalance wasn't directly addressed (e.g. with class weighting or resampling), which likely holds recall back on the minority (churn) class.
+- SMOTE (synthetic oversampling) wasn't tried — only class weighting and threshold tuning, which was enough to make a clear improvement without adding that extra complexity.
 
 ## Future Improvements
 
-- Address class imbalance directly (`class_weight="balanced"`, SMOTE) to try to lift recall
-- Hyperparameter tuning with cross-validation
+- Try SMOTE as a third way of addressing class imbalance, compared against class weighting
+- Hyperparameter tuning with cross-validation (`GridSearchCV`)
 - Try gradient boosting (XGBoost/LightGBM) as a stronger comparison model
-- Threshold tuning — the default 0.5 cutoff isn't necessarily optimal if false negatives (missed churners) are more costly than false positives
+- Pick the exact threshold using a real cost estimate (e.g. cost of a lost customer vs. cost of a retention offer) rather than the round-number 0.3 used here
 
 ## How to Run the Project
 
