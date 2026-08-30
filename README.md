@@ -4,21 +4,22 @@ Predicting which telecom customers are likely to cancel their subscription, usin
 
 ## Problem Statement
 
-Customer churn is expensive — acquiring a new customer costs far more than retaining an existing one. If a company can identify which customers are at risk of leaving *before* they leave, it can target retention offers where they'll actually matter instead of spending on customers who were never going to churn anyway.
+Customer churn is expensive, getting a new customer usually costs a lot more than keeping an existing one. If a company can spot which customers are at risk of leaving before they leave, they can target retention offers at the people who actually need convincing instead of wasting money on customers who were never going to leave anyway.
 
-This project builds a model that predicts churn from a customer's account details, contract type, and services subscribed.
+This project builds a model that predicts churn from a customer's account info, contract type and services.
 
 ## Objectives
 
-- Explore the dataset to understand what drives churn
-- Clean and prepare the data for modeling
-- Train and compare a baseline model against a more complex one
-- Evaluate the models properly, given that churn is an imbalanced outcome
-- Identify which features matter most, for a non-technical audience
+- Explore the dataset and figure out what actually drives churn
+- Clean and prep the data for modeling
+- Train a baseline model and compare it to a more complex one
+- Evaluate properly since churn is an imbalanced outcome
+- Try to improve recall since catching more churners is the main goal
+- Figure out which features matter most
 
 ## Dataset
 
-[IBM Telco Customer Churn](https://github.com/IBM/telco-customer-churn-on-icp4d) — 7,043 customers, 21 columns covering demographics, account details (tenure, contract type, payment method), subscribed services (phone, internet, streaming, tech support), billing (monthly/total charges), and whether the customer churned.
+[IBM Telco Customer Churn](https://github.com/IBM/telco-customer-churn-on-icp4d), 7043 customers, 21 columns covering demographics, account details (tenure, contract, payment method), services subscribed (phone, internet, streaming, tech support), billing, and whether the customer churned.
 
 ## Technologies Used
 
@@ -34,21 +35,21 @@ customer-churn-prediction/
 ├── notebooks/
 │   └── churn_prediction.ipynb
 ├── results/
-│   └── (charts exported from the notebook)
+│   └── charts exported from the notebook
 ├── requirements.txt
 └── .gitignore
 ```
 
 ## Data Cleaning
 
-`TotalCharges` was stored as text rather than a number. Digging into the blank values showed they all belonged to customers with `tenure == 0` — brand new customers who hadn't been billed yet — so those were filled with 0 rather than dropped.
+TotalCharges was stored as text instead of a number. Turns out the blank values all belonged to customers with tenure = 0, basically brand new customers who hadn't been billed yet, so those got filled with 0 instead of dropped.
 
 ## Exploratory Data Analysis
 
-- **Churn rate:** about 27% of customers in the dataset churned — an imbalanced target, which matters for how the models are evaluated later.
-- **Contract type** is one of the strongest signals: month-to-month customers churn far more than customers on one- or two-year contracts, which makes sense since there's no penalty for leaving.
-- **Tenure**: churn is heavily concentrated in the first several months. Customers who stay past year one are much less likely to leave.
-- `TotalCharges` is highly correlated with `tenure` (it's roughly `tenure × MonthlyCharges`), so it doesn't add much independent signal.
+- About 27% of customers churned. Imbalanced target, matters for how the models get evaluated later.
+- Contract type is one of the strongest signals, month to month customers churn way more than customers on a 1 or 2 year contract. Makes sense since theres no penalty for leaving.
+- Tenure: churn is heavily concentrated in the first several months. Customers who stick around past year one are a lot less likely to leave.
+- TotalCharges is highly correlated with tenure (roughly tenure x MonthlyCharges), so it doesn't add a ton of independent signal but I kept it anyway.
 
 | Churn distribution | Churn by contract type | Tenure by churn |
 |---|---|---|
@@ -56,22 +57,22 @@ customer-churn-prediction/
 
 ## Feature Engineering
 
-- Binary Yes/No columns (`Partner`, `Dependents`, `PaperlessBilling`, etc.) were label encoded.
-- Categorical columns with more than two values (`Contract`, `InternetService`, `PaymentMethod`, etc.) were one-hot encoded so the models don't assume a false order between categories.
-- Numeric columns (`tenure`, `MonthlyCharges`, `TotalCharges`) were standardized before Logistic Regression — without scaling, the solver failed to converge cleanly, since these columns range into the thousands while the one-hot columns are just 0/1.
+- Binary Yes/No columns (Partner, Dependents, PaperlessBilling, etc) got label encoded.
+- Columns with more than 2 categories (Contract, InternetService, PaymentMethod, etc) got one-hot encoded instead, so the model doesn't accidentally think one category is bigger than another.
+- Numeric columns (tenure, MonthlyCharges, TotalCharges) were standardized before Logistic Regression. Without scaling the solver actually failed to converge, since these columns are way bigger numbers than the 0/1 dummy columns.
 
 ## Methodology
 
-An 80/20 train/test split was used, stratified on the churn label to keep the same class balance in both sets.
+80/20 train test split, stratified on churn so both sets have the same class balance.
 
 ## Models Used
 
-- **Logistic Regression** — the baseline. Simple, fast, and interpretable, so it's a reasonable bar for a more complex model to beat.
-- **Random Forest** — tried next to see whether modeling non-linear feature interactions improves on the linear baseline.
+- **Logistic Regression**, the baseline. Simple, fast, interpretable, gives something for a fancier model to actually beat.
+- **Random Forest**, tried next to see if it picks up on non linear relationships that Logistic Regression can't.
 
 ## Model Evaluation
 
-Accuracy alone is misleading here — a model that predicted "No churn" for everyone would already score ~73% accuracy without being useful. Precision, recall, and ROC-AUC give a fuller picture of how well each model actually separates churners from non-churners.
+Accuracy alone is kind of misleading here since a model that just predicts "No churn" every time would already be about 73% accurate without being useful at all. Precision, recall and ROC-AUC give a better picture.
 
 | Model | Accuracy | Precision (Churn) | Recall (Churn) | F1 (Churn) | ROC-AUC |
 |---|---|---|---|---|---|
@@ -84,43 +85,43 @@ Accuracy alone is misleading here — a model that predicted "No churn" for ever
 
 ## Results
 
-The two baseline models perform almost identically. Random Forest's ability to capture non-linear interactions doesn't add meaningful lift here, likely because the strongest churn signals (contract type, tenure) are already close to linearly related to the outcome. Given that, Logistic Regression is the more sensible baseline choice — same performance, but easier to explain to a non-technical stakeholder.
+Both baseline models perform pretty much the same. Random Forest doesn't seem to be picking up much extra signal, probably because the strongest churn features (contract type, tenure) are already close to linearly related to the outcome. Going with Logistic Regression since it performs the same and is way easier to explain.
 
 ## Improving Recall
 
-The baseline only catches 56% of actual churners — a real weakness for a retention use case, where missing an at-risk customer is usually costlier than a wasted retention offer. Two fixes were tried:
+The baseline only catches 56% of actual churners, which isn't great for a retention use case where missing a churner is usually worse than wasting an offer on someone who wasn't going to leave. Two things were tried:
 
 | Approach | Precision (Churn) | Recall (Churn) | ROC-AUC |
 |---|---|---|---|
 | Baseline (threshold 0.5) | 0.66 | 0.56 | 0.842 |
-| `class_weight="balanced"` | 0.50 | **0.78** | 0.842 |
+| class_weight="balanced" | 0.50 | **0.78** | 0.842 |
 | Threshold tuned to 0.3 | 0.52 | 0.76 | 0.842 |
 
-![Precision/recall trade-off](results/threshold_tuning.png)
+![Precision/recall tradeoff](results/threshold_tuning.png)
 
-Class weighting turned out to be the more effective of the two — it lifts recall from 0.56 to 0.78 (catching roughly 3 in 4 churners instead of just over half), at the cost of precision dropping to 0.50. ROC-AUC barely moves in either case, which makes sense: it measures how well the model *ranks* churners above non-churners, and neither technique changes that ranking — they just shift where the decision cutoff falls. Threshold tuning alone reached a similar but slightly weaker result (0.76 recall), so class weighting is the recommended approach here, with threshold tuning available as an extra lever if the exact cost of a missed churner vs. a wasted offer is known.
+class_weight="balanced" ended up being the better fix, recall goes from 0.56 to 0.78 (catching around 3 in 4 churners now instead of just over half), precision drops to 0.50 though. ROC-AUC barely changes either way, which makes sense since it measures how well the model ranks churners above non churners and neither technique changes that ranking, they just move where the cutoff sits. Threshold tuning got a similar but slightly worse result (0.76 recall) so class weighting is the one I'd actually go with.
 
-![Confusion matrix, baseline model with threshold lowered to 0.3](results/confusion_matrix_tuned.png)
+![Confusion matrix at threshold 0.3](results/confusion_matrix_tuned.png)
 
 ## Key Findings
 
 ![Feature importance](results/feature_importance.png)
 
-`tenure`, `TotalCharges`, `MonthlyCharges`, and `Contract` type are consistently the strongest predictors. The highest-risk group is new customers on month-to-month contracts paying high monthly charges — which matches a simple, actionable retention strategy: prioritize incentivizing longer contracts, especially in a customer's first few months.
+tenure, TotalCharges, MonthlyCharges and Contract type are consistently the strongest predictors. Highest risk group is new customers on month to month contracts paying high monthly charges, which points to a pretty simple retention strategy: try to get customers onto longer contracts, and pay more attention to customers in their first few months.
 
 ## Limitations
 
-- **Precision drops to 0.50 in the recall-improved model** — about half of the customers flagged as "at risk" won't actually churn, so retention offers under this model would be spent inefficiently in exchange for catching more real churners.
-- The dataset is a **snapshot**, not a time series — it can't show *when* a customer is about to churn, only whether they're at elevated risk.
-- No hyperparameter tuning was done beyond a couple of reasonable defaults (`max_depth=10` for the Random Forest); a grid/random search would likely squeeze out a bit more performance.
-- SMOTE (synthetic oversampling) wasn't tried — only class weighting and threshold tuning, which was enough to make a clear improvement without adding that extra complexity.
+- Precision drops to 0.50 in the recall-improved model, so about half the customers flagged as "at risk" wont actually churn. Retention offers under this model would go to a lot of people who didn't need one.
+- Its a snapshot, not a time series, so it can't say when a customer is about to churn, just that they're at higher risk.
+- Didn't do much hyperparameter tuning, max_depth=10 for Random Forest was just a reasonable guess.
+- Didn't try SMOTE, only class weighting and threshold tuning, which was already enough to see a clear improvement.
 
 ## Future Improvements
 
-- Try SMOTE as a third way of addressing class imbalance, compared against class weighting
-- Hyperparameter tuning with cross-validation (`GridSearchCV`)
-- Try gradient boosting (XGBoost/LightGBM) as a stronger comparison model
-- Pick the exact threshold using a real cost estimate (e.g. cost of a lost customer vs. cost of a retention offer) rather than the round-number 0.3 used here
+- Try SMOTE and compare it against class weighting
+- Proper hyperparameter tuning with GridSearchCV
+- Try XGBoost or LightGBM as a stronger comparison model
+- Pick the threshold based on an actual cost estimate instead of a round number like 0.3
 
 ## How to Run the Project
 
